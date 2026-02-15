@@ -1,65 +1,155 @@
-import Image from "next/image";
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { UploadModal } from '@/components/ui/UploadButton';
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
 
 export default function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
+
+    const handleUpload = async (file: File) => {
+        setIsUploading(true);
+        setError(null);
+
+        localStorage.removeItem('uploadedImage');
+        localStorage.removeItem('metadata');
+
+        try {
+            // Criar FormData para enviar arquivo
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Chamar API
+            const response = await fetch(`${API_URL}/api/v1/analyze`, {
+                method: 'POST',
+                body: formData,
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || !result.success) {
+                throw new Error(result.error || 'Erro ao analisar imagem');
+            }
+
+            // Criar URL da imagem para preview
+            const imageUrl = URL.createObjectURL(file);
+
+            // Salvar dados no localStorage
+            localStorage.setItem('uploadedImage', imageUrl);
+            localStorage.setItem('metadata', JSON.stringify(result.data));
+
+            // Fechar modal e navegar
+            setIsModalOpen(false);
+            router.push('/results');
+
+        } catch (err) {
+            const errorMessage = err instanceof Error ? err.message : 'Erro ao processar imagem';
+            setError(errorMessage);
+            console.error('Upload error:', err);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    return (
+        /* Adicionado overflow-hidden na div principal para evitar que as luzes gerem scroll horizontal */
+        <div className="min-h-screen text-white font-sans relative pb-24 overflow-hidden">
+            
+            {/* ESTILOS DA ANIMAÇÃO DAS LUZES */}
+            <style>{`
+                @keyframes blob {
+                    0% { transform: translate(0px, 0px) scale(1); }
+                    33% { transform: translate(30px, -50px) scale(1.1); }
+                    66% { transform: translate(-20px, 20px) scale(0.9); }
+                    100% { transform: translate(0px, 0px) scale(1); }
+                }
+                .animate-blob {
+                    animation: blob 7s infinite;
+                }
+                .animation-delay-2000 {
+                    animation-delay: 2s;
+                }
+                .animation-delay-4000 {
+                    animation-delay: 4s;
+                }
+            `}</style>
+
+            {/* ELEMENTOS DE LUZ DESFOCADA (FUNDO) */}
+            <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                {/* Luz Teal (Combinando com os botões) */}
+                <div className="absolute top-[-10%] left-[-10%] h-[200px] w-[200px] md:w-[500px] md:h-[500px] bg-teal-500/20 rounded-full mix-blend-screen filter blur-[120px] opacity-60 animate-blob"></div>
+                
+                {/* Luz Índigo (Contraste) */}
+                <div className="absolute top-[20%] right-[-10%] w-[400px] h-[400px] bg-indigo-500/20 rounded-full mix-blend-screen filter blur-[120px] opacity-60 animate-blob animation-delay-2000"></div>
+                
+                {/* Luz Azul (Base) */}
+                <div className="absolute bottom-[-20%] left-[20%] h-[300px] w-[300px] md:w-[600px] md:h-[600px] bg-blue-500/20 rounded-full mix-blend-screen filter blur-[120px] opacity-60 animate-blob animation-delay-4000"></div>
+            </div>
+
+            {/* CONTEÚDO PRINCIPAL (z-10 garante que fique na frente das luzes) */}
+            <div className="max-w-7xl w-full mx-auto relative z-10 px-4 sm:px-6">
+                
+                {/* HEADER */}
+                <header className="w-full pt-8 pb-16">
+                    <h2 className="text-white font-semibold text-xl tracking-wide">HuskyTrace</h2>
+                    {/* <span className='text-white text-sm tracking-wide cursor-pointer hover:text-teal-400 transition-colors'>
+                        Política de Privacidade
+                    </span> */}
+                </header>
+                
+                {/* HERO SECTION */}
+                <main className="flex flex-col items-center justify-center mb-32">
+                    <section className="relative flex flex-col items-center w-full max-w-3xl text-center rounded-2xl overflow-hidden p-10 sm:p-16">
+                        <div className="relative z-10 flex flex-col items-center">
+                            <span className="mb-4 rounded-full bg-teal-500/10 px-3 py-1 text-[10px] font-mono tracking-widest text-teal-400 border border-teal-500/20 shadow-[0_0_15px_rgba(20,184,166,0.2)]">
+                                NOVO RECURSO
+                            </span>
+                            
+                            <h1 className="font-semibold text-4xl sm:text-5xl text-white tracking-tight leading-tight mb-6">
+                                Rastreie a origem de <br className="hidden sm:block"/>
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
+                                    qualquer foto em segundos
+                                </span>
+                            </h1>
+                            
+                            <p className="text-gray-400 mb-10 max-w-lg text-sm sm:text-base">
+                                Faça o upload da imagem para fazer uma varredura e encontrar a fonte original e os metadados.
+                            </p>
+                            
+                            <button 
+                                onClick={() => setIsModalOpen(true)}
+                                disabled={isUploading}
+                                className="group relative flex items-center justify-center gap-2 rounded-full bg-[#0D1017] cursor-pointer border border-(--border-color) px-8 py-4 text-sm font-medium text-white transition-all duration-200 hover:bg-[#07090e] hover:border-white/15 overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <span>Enviar imagem</span>
+                                <svg className="w-4 h-4 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                                </svg>
+                            </button>
+
+                            {/* Error Message */}
+                            {error && (
+                                <div className="mt-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                                    <p className="text-red-400 text-sm">{error}</p>
+                                </div>
+                            )}
+                        </div>
+                    </section>
+                </main>
+            </div>
+            
+            {/* Upload Modal */}
+            <UploadModal 
+                isOpen={isModalOpen}
+                onClose={() => !isUploading && setIsModalOpen(false)}
+                onUpload={handleUpload}
+                isUploading={isUploading}
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
         </div>
-      </main>
-    </div>
-  );
+    );
 }
