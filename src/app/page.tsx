@@ -17,12 +17,12 @@ export default function Home() {
 
         localStorage.removeItem('uploadedImage');
         localStorage.removeItem('metadata');
-
+;
         try {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/analyze`, {
+            const response = await fetch(`https://huskyhunt-backend-production.up.railway.app/api/v1/analyze`, {
                 method: 'POST',
                 body: formData,
             });
