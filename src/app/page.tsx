@@ -5,8 +5,6 @@ import { useRouter } from 'next/navigation';
 import { UploadModal } from '@/components/ui/UploadButton';
 import { motion, Variants } from 'framer-motion';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3333';
-
 export default function Home() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
@@ -24,7 +22,7 @@ export default function Home() {
             const formData = new FormData();
             formData.append('file', file);
 
-            const response = await fetch(`${API_URL}/api/v1/analyze`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/analyze`, {
                 method: 'POST',
                 body: formData,
             });
